@@ -1,0 +1,8 @@
+#define META_KEY 8282
+#define MAX_REG_NUM 10
+
+#define REQ_QUEUE_INDEX 1
+#define RES_QUEUE_INDEX 2
+
+#define MSG_HEADER_SIZE 24
+#define MAX_QUEUE_ELEM 16

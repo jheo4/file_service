@@ -50,3 +50,10 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Vim Specific
+*.swp
+
+# Project Specific
+bin/
+output/readme.txt

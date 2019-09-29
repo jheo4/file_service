@@ -1,0 +1,13 @@
+#A sample yaml file to be provided to the client processes which provides a list of one or more file names that will be requested from the service process (ok to send requests for the same file(s))
+# use --conf ./config_filename.yaml
+
+REQUESTS:
+	# request 1
+	- FILE_TYPE : ./input/Huge.jpg
+
+	# request 2
+	- FILE_TYPE : ./input/Medium.pdf
+
+	# request 3
+	- FILE_TYPE : ./input/Small.jpg
+
