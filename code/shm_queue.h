@@ -42,3 +42,4 @@ int dequeue(shmQueue_t* queue, message_t* data);
 int isFull(shmQueue_t*);
 int isEmpty(shmQueue_t*);
 
+void printQueueInfo(shmQueue_t* queue);
