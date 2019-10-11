@@ -1,0 +1,3 @@
+[submodule "libcyaml"]
+	path = libcyaml
+	url = https://github.com/tlsa/libcyaml
