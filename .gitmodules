@@ -1,3 +1,6 @@
 [submodule "libcyaml"]
 	path = libcyaml
 	url = https://github.com/tlsa/libcyaml
+[submodule "snappy-c"]
+	path = snappy-c
+	url = https://github.com/andikleen/snappy-c
