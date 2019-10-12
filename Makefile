@@ -1,7 +1,8 @@
 CC = gcc
 CFLAGS = -g -Wall -pthread
-LDFLAGS =
-LIBS += -lm
+LDFLAGS = -Llibcyaml/build/release
+LIBS += -lm -lcyaml -lyaml
+INC=-Ilibcyaml/include
 SRC = code/shwrapper.c code/shm_queue.c
 OBJ = $(SRC:.c=.o)
 
@@ -17,12 +18,13 @@ setup:
 	mkdir bin
 
 server:
-	$(CC) $(CFLAGS) code/server.c code/config.h code/shwrapper.h \
-		./code/shm_queue.h $(OUT) -o bin/server $(LIBS)
+	$(CC) $(CFLAGS) $(INC) code/server.c code/config.h code/shwrapper.h \
+		./code/shm_queue.h $(OUT) -o bin/server $(LDFLAGS) $(LIBS)
 
 client:
-	$(CC) $(CFLAGS) code/client.c code/config.h code/shwrapper.h \
-		./code/shm_queue.h $(OUT) -o bin/client $(LIBS)
+	$(CC) $(CFLAGS) $(INC) code/client.c code/config.h code/shwrapper.h \
+		./code/shm_queue.h $(OUT) -o bin/client $(LDFLAGS) $(LIBS)
 
 clean:
 	@rm code/*.o bin/*
+

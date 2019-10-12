@@ -11,8 +11,11 @@
 #include "config.h"
 #include "shwrapper.h"
 
-unsigned int maxSeg = 4;
-unsigned int sizePerSeg = 512;
+unsigned int maxSeg = 0;
+unsigned int sizePerSeg = 0;
+unsigned int segID;
+segInfo_t *seg;
+
 unsigned int pid;
 
 shmQueue_t queue[MAX_QUEUE];
@@ -29,10 +32,25 @@ void *bindClient();
 void *workComp();
 
 
-int main(){
+int main(int argc, char *argv[]){
+  enum{
+    ARG_PROG_NAME,
+    ARG_SEG_NUM_INFO,
+    ARG_SEG_NUM,
+    ARG_SEG_SIZE_INFO,
+    ARG_SEG_SIZE,
+  };
+
   pid = SERVER_IDENTIFIER;
   pthread_t bindThread;
   pthread_t compThread;
+
+  maxSeg = atoi(argv[ARG_SEG_NUM]);
+  sizePerSeg = atoi(argv[ARG_SEG_SIZE]);
+  segID = getShm(SEG_KEY, sizeof(segInfo_t));
+  seg = shmat(segID, (void*)0, 0);
+  seg->sizePerSeg = sizePerSeg;
+  seg->maxSeg = maxSeg;
 
   clientReg = getRegistry(&clientRegID, CLIENT_REG_KEY);
   serverReg = getRegistry(&serverRegID, SERVER_REG_KEY);
@@ -46,6 +64,8 @@ int main(){
   pthread_join(bindThread, NULL);
   pthread_join(compThread, NULL);
 
+  shmdt(&seg);
+  shmctl(segID, IPC_RMID, NULL);
   shmdt(clientReg);
   shmdt(serverReg);
   shmctl(clientRegID, IPC_RMID, NULL);

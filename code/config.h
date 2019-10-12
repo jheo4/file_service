@@ -9,4 +9,5 @@
 
 #define CLIENT_REG_KEY 50000
 #define SERVER_REG_KEY 50001
+#define SEG_KEY 50002
 

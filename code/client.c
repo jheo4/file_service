@@ -10,9 +10,15 @@
 #include "shm_queue.h"
 #include "config.h"
 #include "shwrapper.h"
+//#include "cyaml.cyaml.h"
+#include "/home/jin/github/file_service/libcyaml/include/cyaml/cyaml.h"
+#include "yamlParser.h"
 
-unsigned int maxSeg = 4;
-unsigned int sizePerSeg = 512;
+unsigned int maxSeg = 0;
+unsigned int sizePerSeg = 0;
+unsigned int segID;
+segInfo_t *seg;
+
 unsigned int pid;
 
 shmQueue_t queue[2];
@@ -31,9 +37,49 @@ void *asyncRequestServer();
 void *syncRequestServer();
 
 
-int main(){
+int main(int argc, char *argv[]){
+  enum{
+    ARG_PROG_NAME,
+    ARG_CONF,
+    ARG_PATH_IN,
+    ARG_STATE,
+    ARG_SYNC,
+  };
+
   int isSync = 0;
   pthread_t compThread;
+  requestInfo_t *reqInfo;
+  cyaml_err_t err;
+
+  segID = getShm(SEG_KEY, sizeof(segInfo_t));
+  seg = shmat(segID, (void*)0, 0);
+  sizePerSeg = seg->sizePerSeg;
+  maxSeg = seg->maxSeg;
+  printf("maxSeg %d, sizePerSeg %d\n", maxSeg, sizePerSeg);
+
+  printf("Sync Mode...\n");
+  if(!strcmp(argv[ARG_SYNC], "ASYNC") || !strcmp(argv[ARG_SYNC], "async")){
+    printf("  ASYNC\n\n");
+    isSync = 0;
+  }
+  else{
+    printf("  SYNC\n\n");
+    isSync = 1;
+  }
+
+  err = cyaml_load_file(argv[ARG_PATH_IN], &config, &requestSchema,
+      (void**) &reqInfo, NULL);
+  if (err != CYAML_OK) {
+    fprintf(stderr, "ERROR: %s\n", cyaml_strerror(err));
+    return EXIT_FAILURE;
+  }
+  printf("FileList...\n");
+  for(int i = 0; i < reqInfo->requests_count; i++){
+    printf("  %d: %s\n", i, reqInfo->requests[i].fileType);
+  }
+  printf("\n");
+  cyaml_free(&config, &requestSchema, reqInfo, 0);
+
 
   clientReg = getRegistry(&clientRegID, CLIENT_REG_KEY);
   serverReg = getRegistry(&serverRegID, SERVER_REG_KEY);

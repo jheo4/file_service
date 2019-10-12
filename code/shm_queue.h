@@ -1,7 +1,12 @@
 #include <pthread.h>
 #include "config.h"
 
-//typedef struct shmQueue shmQueue_t;
+
+typedef struct segInfo{
+  unsigned int maxSeg;
+  unsigned int sizePerSeg;
+}segInfo_t;
+
 typedef struct shmQueueMeta{
   pthread_mutex_t lock;
   unsigned int readIndex;
@@ -10,7 +15,6 @@ typedef struct shmQueueMeta{
   int empty;
   int full;
 }shmQueueMeta_t;
-
 
 typedef struct shmQueue{
   unsigned int metaID;
