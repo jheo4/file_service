@@ -7,6 +7,8 @@
 #include <signal.h>
 #include <unistd.h>
 #include <pthread.h>
+#include "/home/jin/github/file_service/snappy-c/snappy.h"
+//#include <snappy.h>
 #include "shm_queue.h"
 #include "config.h"
 #include "shwrapper.h"
@@ -35,6 +37,8 @@ void *workComp();
 int main(int argc, char *argv[]){
   enum{
     ARG_PROG_NAME,
+    ARG_STATE,
+    ARG_SYNC,
     ARG_SEG_NUM_INFO,
     ARG_SEG_NUM,
     ARG_SEG_SIZE_INFO,
@@ -56,13 +60,16 @@ int main(int argc, char *argv[]){
   serverReg = getRegistry(&serverRegID, SERVER_REG_KEY);
   clientReg->registry = 0;
   serverReg->registry = 0;
-  printf("reginfo in main: %d\n", clientReg->registry);
-  printf("reginfo in main: %d\n", serverReg->registry);
 
   pthread_create(&bindThread, NULL, bindClient, NULL);
   pthread_create(&compThread, NULL, workComp, NULL);
   pthread_join(bindThread, NULL);
   pthread_join(compThread, NULL);
+
+  free(queueMessage[0].content);
+  free(queueMessage[1].content);
+  for(int i = 0; i < serverReg->registry; i++)
+    destroyQueue(&queue[i]);
 
   shmdt(&seg);
   shmctl(segID, IPC_RMID, NULL);
@@ -70,25 +77,6 @@ int main(int argc, char *argv[]){
   shmdt(serverReg);
   shmctl(clientRegID, IPC_RMID, NULL);
   shmctl(serverRegID, IPC_RMID, NULL);
-
-  /*
-  createQueue(4, 512, REQ_QUEUE_INDEX, &reqQueue, sizeof(shmQueue_t));
-  initQueue(&reqQueue);
-  reqMessage.content = (void*)malloc(reqQueue.sizePerSeg);
-  printf("after setting...\n%d %d\n", reqQueue.maxSeg, reqQueue.sizePerSeg);
-
-  while(1){
-    dequeue(&reqQueue, &reqMessage);
-    printf("%d %s\n%s\n", reqMessage.id, reqMessage.fn,
-        (char*)reqMessage.content);
-    sleep(1);
-  }
-
-  free(reqMessage.content);
-
-  destroyQueue(&reqQueue);
-  //destroyQueue(resQueue);
-  */
   return 0;
 }
 
@@ -108,36 +96,39 @@ void *bindClient(){
       createQueue(maxSeg, sizePerSeg, servingClient,
           &queue[servingClient], sizeof(shmQueue_t));
       initQueue(&queue[servingClient]);
-
-      printQueueInfo(&queue[servingClient]);
     }
     pthread_mutex_lock(&serverReg->lock);
-    serverReg->registry = servingClient;
+    if(serverReg->registry != servingClient){
+      serverReg->registry = servingClient;
+      printf("Client is registered...\n");
+    }
     pthread_mutex_unlock(&serverReg->lock);
-    sleep(5);
+    sleep(1);
   }
 }
 
 
 void *workComp(){
+  struct snappy_env env;
+  size_t compressed_size;
+  snappy_init_env(&env);
 
   queueMessage[0].content = (void*)malloc(queue[0].sizePerSeg);
   queueMessage[1].content = (void*)malloc(queue[1].sizePerSeg);
   queueMessage[1].id = pid;
 
-  char buf[100];
+  printf("Compressor works...\n");
   while(1){
-    for(int i = 0; i < servingClient; i+=2){
-      if(!isEmpty(&queue[i])){
+    for(int i = 0; i < serverReg->registry; i+=2){
+      if(queue[i].meta->curSeg != 0 &&
+          queue[i+1].meta->curSeg < queue[i+1].maxSeg){
         dequeue(&queue[i], &queueMessage[0]);
-        printQueueInfo(&queue[i]);
+        snappy_compress(&env, queueMessage[0].content,
+            queueMessage[0].contentSize, queueMessage[1].content,
+            &queueMessage[1].contentSize);
+        strcpy(queueMessage[1].fn, queueMessage[0].fn);
 
-        strcpy(queueMessage[1].fn, "respond");
-        sprintf(buf, "%s compressed", (char*)queueMessage[0].content);
-        memcpy(queueMessage[1].content, buf, queue[i+1].sizePerSeg);
         enqueue(&queue[i+1], &queueMessage[1]);
-        printQueueInfo(&queue[i+1]);
-        sleep(3);
       }
     }
   }

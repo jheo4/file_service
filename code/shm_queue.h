@@ -28,7 +28,8 @@ typedef struct shmQueue{
 
 typedef struct message{
   int id;
-  char fn[20];
+  char fn[30];
+  size_t contentSize;
   void *content;
 }message_t;
 

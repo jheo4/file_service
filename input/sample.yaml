@@ -2,12 +2,9 @@
 # use --conf ./config_filename.yaml
 
 REQUESTS:
-  # request 1
   - FILE_TYPE : ./input/Huge.jpg
-
-  # request 2
+  - FILE_TYPE : ./input/Large.txt
   - FILE_TYPE : ./input/Medium.pdf
-
-  # request 3
   - FILE_TYPE : ./input/Small.jpg
+  - FILE_TYPE : ./input/Tiny.txt
 

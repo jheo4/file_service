@@ -17,7 +17,6 @@ void createQueue(unsigned int _maxSeg, unsigned int _sizePerSeg,
   newQueue->sizePerSeg = _sizePerSeg;
   newQueue->sizeOfMsg = _sizePerSeg + MSG_HEADER_SIZE;
   newQueue->queueIndex = (_queueIndex * _maxSeg) + QUEUE_ELEM_SECTION;
-  int shmSize = sizeof(int)*_maxSeg;
   for(int i=newQueue->queueIndex, j=0; i < newQueue->queueIndex + _maxSeg; i++,
       j++){
     newQueue->shmIDs[j] = getShm(i, newQueue->sizeOfMsg);
@@ -63,8 +62,8 @@ int enqueue(shmQueue_t* queue, struct message* data){
   memcpy(shm+MSG_HEADER_SIZE, data->content, queue->sizePerSeg);
   shmdt(shm);
 
-  printf("Enqueue idx(%d) cur(%d) RI(%d) WI(%d)\n", queue->queueIndex,
-      queue->meta->curSeg, queue->meta->readIndex, queue->meta->writeIndex);
+  //printf("Enqueue idx(%d) cur(%d) RI(%d) WI(%d)\n", queue->queueIndex,
+  //    queue->meta->curSeg, queue->meta->readIndex, queue->meta->writeIndex);
   queue->meta->curSeg+=1;
   queue->meta->writeIndex = (queue->meta->writeIndex + 1) % queue->maxSeg;
 
@@ -83,7 +82,6 @@ int dequeue(shmQueue_t* queue, struct message* data){
 
   pthread_mutex_lock(&queue->meta->lock);
 
-  printf("dequeue...\n");
   shm = (void *) shmat(queue->shmIDs[queue->meta->readIndex], (void*) 0, 0);
   memcpy(data, shm, MSG_HEADER_SIZE);
   memcpy(data->content, shm+MSG_HEADER_SIZE, queue->sizePerSeg);

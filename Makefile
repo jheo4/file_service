@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -g -Wall -pthread
-LDFLAGS = -Llibcyaml/build/release
-LIBS += -lm -lcyaml -lyaml
-INC=-Ilibcyaml/include
+LDFLAGS = -Llibcyaml/build/release -Lsnappy-c
+LIBS += -lm -lcyaml -lyaml -lsnappyc
+INC=-Ilibcyaml/include -Isnappy-c
 SRC = code/shwrapper.c code/shm_queue.c
 OBJ = $(SRC:.c=.o)
 

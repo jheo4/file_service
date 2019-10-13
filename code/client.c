@@ -7,12 +7,19 @@
 #include <signal.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/time.h>
 #include "shm_queue.h"
 #include "config.h"
 #include "shwrapper.h"
-//#include "cyaml.cyaml.h"
+//#include <cyaml/cyaml.h>
 #include "/home/jin/github/file_service/libcyaml/include/cyaml/cyaml.h"
 #include "yamlParser.h"
+
+typedef void (*callBack)();
+typedef struct printInfo{
+  char info[20][30];
+  int curInfo;
+} printInfo_t;
 
 unsigned int maxSeg = 0;
 unsigned int sizePerSeg = 0;
@@ -20,6 +27,10 @@ unsigned int segID;
 segInfo_t *seg;
 
 unsigned int pid;
+int isSync = 0;
+callBack resFunc;
+requestInfo_t *reqInfo;
+printInfo_t pInfo;
 
 shmQueue_t queue[2];
 message_t queueMessage[2];
@@ -31,24 +42,20 @@ struct registryInfo *serverReg;
 unsigned int requestClient;
 unsigned int servingClient;
 
-typedef void (*callBack)();
 void getResponse();
-void *asyncRequestServer();
-void *syncRequestServer();
-
+void *requestServer();
+void testRoundtrip(FILE *fp, int iteration, char *fn,
+    struct timeval *tripTime);
+void printTotalInfo(int cur, int tot, int curIter, int totIter);
 
 int main(int argc, char *argv[]){
   enum{
-    ARG_PROG_NAME,
-    ARG_CONF,
-    ARG_PATH_IN,
-    ARG_STATE,
-    ARG_SYNC,
+    ARG_PROG_NAME, ARG_CONF, ARG_PATH_IN,
+    ARG_STATE, ARG_SYNC,
   };
+  pInfo.curInfo = 0;
 
-  int isSync = 0;
   pthread_t compThread;
-  requestInfo_t *reqInfo;
   cyaml_err_t err;
 
   segID = getShm(SEG_KEY, sizeof(segInfo_t));
@@ -61,6 +68,7 @@ int main(int argc, char *argv[]){
   if(!strcmp(argv[ARG_SYNC], "ASYNC") || !strcmp(argv[ARG_SYNC], "async")){
     printf("  ASYNC\n\n");
     isSync = 0;
+    resFunc = getResponse;
   }
   else{
     printf("  SYNC\n\n");
@@ -73,12 +81,11 @@ int main(int argc, char *argv[]){
     fprintf(stderr, "ERROR: %s\n", cyaml_strerror(err));
     return EXIT_FAILURE;
   }
+
   printf("FileList...\n");
   for(int i = 0; i < reqInfo->requests_count; i++){
     printf("  %d: %s\n", i, reqInfo->requests[i].fileType);
-  }
-  printf("\n");
-  cyaml_free(&config, &requestSchema, reqInfo, 0);
+  } printf("\n");
 
 
   clientReg = getRegistry(&clientRegID, CLIENT_REG_KEY);
@@ -91,7 +98,7 @@ int main(int argc, char *argv[]){
 
   while(serverReg->registry < pid+2){
     printf("waiting for the server to register...\n");
-    sleep(1);
+    sleep(2);
   }
   printf("registered..!\n");
   shmdt(clientReg);
@@ -103,17 +110,10 @@ int main(int argc, char *argv[]){
     queueMessage[i].content = (void*)malloc(queue[i].sizePerSeg);
   }
 
-
-  if(isSync){
-    pthread_create(&compThread, NULL, syncRequestServer, NULL);
-  }
-  else{
-    pthread_create(&compThread, NULL, asyncRequestServer, NULL);
-  }
-
+  pthread_create(&compThread, NULL, requestServer, NULL);
   pthread_join(compThread, NULL);
 
-
+  cyaml_free(&config, &requestSchema, reqInfo, 0);
   for(int i = 0; i < 2; i++){
     free(queueMessage[i].content);
     cleanQueue(&queue[i]);
@@ -124,43 +124,103 @@ int main(int argc, char *argv[]){
 
 void getResponse(){
   dequeue(&queue[1], &queueMessage[1]);
-  printf("respond %s\n", (char*)queueMessage[1].content);
 }
 
 
-void *asyncRequestServer(){
-  callBack resFunc = getResponse;
-  char buf[100] = "message: ";
+void *requestServer(){
+  FILE *fp_in;
+  struct timeval simple, stress;
+  if(!isSync)
 
-  while(1){
-    strcpy(queueMessage[0].fn, "request");
-    sprintf(buf, "YaRae YaRae... %d ", pid);
-    memcpy(queueMessage[0].content, buf, queue[0].sizePerSeg);
+  // simple test
+  strcpy(pInfo.info[0], "Simple Test");
+  for(int i = 0; i < reqInfo->requests_count; i++){
+    pInfo.curInfo = i+1;
+    strcpy(pInfo.info[i+1], reqInfo->requests[i].fileType);
+    testRoundtrip(fp_in, 1, reqInfo->requests[i].fileType, &simple);
+  }
 
-    if(queue[0].meta->curSeg != maxSeg){
-      enqueue(&queue[0], &queueMessage[0]);
+  // stress testing
+  strcpy(pInfo.info[0], "Stress Test");
+  for(int i = 0; i < reqInfo->requests_count; i++){
+    pInfo.curInfo = i+1;
+    strcpy(pInfo.info[i+1], reqInfo->requests[i].fileType);
+    testRoundtrip(fp_in, 100, reqInfo->requests[i].fileType, &stress);
+  }
+
+  printf("Simple execution time: %lds %03ld\n", simple.tv_sec, simple.tv_usec);
+  printf("Stress execution time: %lds %03ld\n", stress.tv_sec, stress.tv_usec);
+}
+
+void testRoundtrip(FILE *fp, int iteration, char *fn,
+    struct timeval *tripTime){
+  struct timeval totalTime, temp;
+  fp = fopen(fn, "r");
+  if(fp == NULL){
+    printf("file open error...\n");
+    return;
+  }
+  
+  fseek(fp, 0, SEEK_END);
+  unsigned int totalSize = ftell(fp);
+  unsigned int readSize;
+  int curProgress, tempInfo = pInfo.curInfo++;
+
+  int packets = (totalSize / queue[0].sizePerSeg) + 1;
+  gettimeofday(&totalTime, NULL);
+  for(int i = 0; i < iteration; i++){
+    rewind(fp);
+    readSize = 0;
+    curProgress = 0;
+    for(int j = 0; j < packets; j++){
+      readSize = fread(queueMessage[0].content, 1, queue[0].sizePerSeg, fp);
+      queueMessage[0].contentSize = readSize;
+      strcpy(queueMessage[0].fn, fn);
+
+      if(isSync){
+        if(queue[0].meta->curSeg != maxSeg){
+          enqueue(&queue[0], &queueMessage[0]);
+          while(queue[1].meta->curSeg == 0){ }  // blocking
+          dequeue(&queue[1], &queueMessage[1]);
+          curProgress++;
+          printTotalInfo(curProgress, packets, i, iteration);
+        }
+      }
+      else{
+        if(queue[0].meta->curSeg != maxSeg){
+          enqueue(&queue[0], &queueMessage[0]);
+        }
+        if(queue[1].meta->curSeg != 0){
+          resFunc();
+          curProgress++;
+          printTotalInfo(curProgress, packets, i, iteration);
+        }
+      }
     }
-    // callback
-    if(queue[1].meta->curSeg != 0){
-      resFunc();
+    while(queue[1].meta->curSeg != 0){
+      dequeue(&queue[1], &queueMessage[1]);
+      curProgress++;
+      printTotalInfo(curProgress, packets, i, iteration);
     }
   }
+  gettimeofday(&temp, NULL);
+  timersub(&temp, &totalTime, &totalTime);
+  timeradd(&totalTime, tripTime, tripTime);
+  sprintf(pInfo.info[tempInfo], "%s is done", fn);
+  pInfo.curInfo = tempInfo;
+  printTotalInfo(-1, -1, -1, -1);
+
+  fclose(fp);
 }
 
-void *syncRequestServer(){
-  char buf[100] = "message: ";
-  while(1){
-    strcpy(queueMessage[0].fn, "request");
-    sprintf(buf, "NIKIMI!!! %d ", pid);
-    memcpy(queueMessage[0].content, buf, queue[0].sizePerSeg);
 
-    if(queue[0].meta->curSeg != maxSeg){
-      enqueue(&queue[0], &queueMessage[0]);
-      while(queue[1].meta->curSeg == 0){ }  // blocking
-      dequeue(&queue[1], &queueMessage[1]);
-      printf("respond %s\n", (char*)queueMessage[1].content);
-    }
-
-    printf("I'm synchronous...\n");
+void printTotalInfo(int cur, int tot, int curIter, int totIter){
+  clear();
+  for(int i = 0; i < pInfo.curInfo; i++){
+    printf("%s\n", pInfo.info[i]);
+  }
+  if(cur > 0 && tot > 0){
+    printf("(%d/%d) Iteration Progress (%d/%d)\n", curIter, totIter,
+        cur, tot);
   }
 }
