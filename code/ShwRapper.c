@@ -3,7 +3,8 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <pthread.h>
-#include "shwrapper.h"
+#include "ShwRapper.h"
+#include "config.h"
 
 
 
@@ -26,11 +27,11 @@ int setSharedLock(pthread_mutex_t *inputLock){
 }
 
 
-registryInfo_t* getRegistry(unsigned int *regID, unsigned int keyVal){
-  *regID = getShm(keyVal, sizeof(registryInfo_t));
-  registryInfo_t* tempReg;
-  tempReg = shmat(*regID, (void*)0, 0);
-  setSharedLock(&tempReg->lock);
-  return tempReg;
+poolInfo_t* getPoolInfo(unsigned int *poolID){
+  *poolID = getShm(QUEUE_POOL_KEY, sizeof(poolInfo_t));
+  poolInfo_t *pool;
+  pool = shmat(*poolID, (void*)0, 0);
+  setSharedLock(&pool->lock);
+  return pool;
 }
 

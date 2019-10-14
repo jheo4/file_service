@@ -1,0 +1,47 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+AVAILABLE	/home/jin/github/file_service/code/config.h	16;"	d	language:C++
+MAX_CLIENT	/home/jin/github/file_service/code/config.h	6;"	d	language:C++
+MAX_QUEUE	/home/jin/github/file_service/code/config.h	5;"	d	language:C++
+MAX_QUEUE_ELEM	/home/jin/github/file_service/code/config.h	4;"	d	language:C++
+META_ELEM_SECTION	/home/jin/github/file_service/code/config.h	9;"	d	language:C++
+MSG_HEADER_SIZE	/home/jin/github/file_service/code/config.h	3;"	d	language:C++
+QUEUE_ELEM_SECTION	/home/jin/github/file_service/code/config.h	8;"	d	language:C++
+QUEUE_POOL_KEY	/home/jin/github/file_service/code/config.h	11;"	d	language:C++
+REQUESTED	/home/jin/github/file_service/code/config.h	17;"	d	language:C++
+SEG_KEY	/home/jin/github/file_service/code/config.h	12;"	d	language:C++
+SERVER_IDENTIFIER	/home/jin/github/file_service/code/config.h	1;"	d	language:C++
+USED	/home/jin/github/file_service/code/config.h	18;"	d	language:C++
+cleanQueue	/home/jin/github/file_service/code/ShmQueue.c	/^void cleanQueue(shmQueue_t* queue){$/;"	f	language:C++
+clear	/home/jin/github/file_service/code/config.h	14;"	d	language:C++
+config	/home/jin/github/file_service/code/YamlParser.h	/^static const cyaml_config_t config = {$/;"	v	language:C++
+createQueue	/home/jin/github/file_service/code/ShmQueue.c	/^void createQueue(unsigned int _maxSeg, unsigned int _sizePerSeg,$/;"	f	language:C++
+dequeue	/home/jin/github/file_service/code/ShmQueue.c	/^int dequeue(shmQueue_t* queue, struct message* data){$/;"	f	language:C++
+destroyQueue	/home/jin/github/file_service/code/ShmQueue.c	/^void destroyQueue(shmQueue_t* queue){$/;"	f	language:C++
+enqueue	/home/jin/github/file_service/code/ShmQueue.c	/^int enqueue(shmQueue_t* queue, struct message* data){$/;"	f	language:C++
+fileType	/home/jin/github/file_service/code/YamlParser.h	/^  const char *fileType;$/;"	m	language:C++	struct:request
+fileTypeSchema	/home/jin/github/file_service/code/YamlParser.h	/^static const cyaml_schema_field_t fileTypeSchema[] = {$/;"	v	language:C++
+generateOutput	/home/jin/github/file_service/code/OutputGenerator.c	/^void generateOutput(resultInfo_t *res){$/;"	f	language:C++
+getPoolInfo	/home/jin/github/file_service/code/ShwRapper.c	/^poolInfo_t* getPoolInfo(unsigned int *poolID){$/;"	f	language:C++
+getShm	/home/jin/github/file_service/code/ShwRapper.c	/^int getShm(int key, int size){$/;"	f	language:C++
+initQueue	/home/jin/github/file_service/code/ShmQueue.c	/^void initQueue(shmQueue_t* queue){$/;"	f	language:C++
+isEmpty	/home/jin/github/file_service/code/ShmQueue.c	/^int isEmpty(shmQueue_t* queue){$/;"	f	language:C++
+isFull	/home/jin/github/file_service/code/ShmQueue.c	/^int isFull(shmQueue_t* queue){$/;"	f	language:C++
+printQueueInfo	/home/jin/github/file_service/code/ShmQueue.c	/^void printQueueInfo(shmQueue_t* queue){$/;"	f	language:C++
+request	/home/jin/github/file_service/code/YamlParser.h	/^typedef struct request {$/;"	s	language:C++
+request::fileType	/home/jin/github/file_service/code/YamlParser.h	/^  const char *fileType;$/;"	m	language:C++	struct:request
+requestInfo	/home/jin/github/file_service/code/YamlParser.h	/^typedef struct requestInfo {$/;"	s	language:C++
+requestInfo::requests	/home/jin/github/file_service/code/YamlParser.h	/^  request_t* requests;$/;"	m	language:C++	struct:requestInfo
+requestInfo::requests_count	/home/jin/github/file_service/code/YamlParser.h	/^  uint64_t requests_count;$/;"	m	language:C++	struct:requestInfo
+requestInfoFieldSchema	/home/jin/github/file_service/code/YamlParser.h	/^static const cyaml_schema_field_t requestInfoFieldSchema[] = {$/;"	v	language:C++
+requestInfo_t	/home/jin/github/file_service/code/YamlParser.h	/^}requestInfo_t;$/;"	t	language:C++	typeref:struct:requestInfo
+requestSchema	/home/jin/github/file_service/code/YamlParser.h	/^static const cyaml_schema_value_t requestSchema = {$/;"	v	language:C++
+requestTypeSchema	/home/jin/github/file_service/code/YamlParser.h	/^static const cyaml_schema_value_t requestTypeSchema = {$/;"	v	language:C++
+request_t	/home/jin/github/file_service/code/YamlParser.h	/^} request_t;$/;"	t	language:C++	typeref:struct:request
+requests	/home/jin/github/file_service/code/YamlParser.h	/^  request_t* requests;$/;"	m	language:C++	struct:requestInfo
+requests_count	/home/jin/github/file_service/code/YamlParser.h	/^  uint64_t requests_count;$/;"	m	language:C++	struct:requestInfo
+setSharedLock	/home/jin/github/file_service/code/ShwRapper.c	/^int setSharedLock(pthread_mutex_t *inputLock){$/;"	f	language:C++

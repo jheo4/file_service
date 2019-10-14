@@ -5,8 +5,8 @@
 #include <signal.h>
 #include <pthread.h>
 #include <string.h>
-#include "shwrapper.h"
-#include "shm_queue.h"
+#include "ShwRapper.h"
+#include "ShmQueue.h"
 #include "config.h"
 
 void createQueue(unsigned int _maxSeg, unsigned int _sizePerSeg,
@@ -59,11 +59,9 @@ int enqueue(shmQueue_t* queue, struct message* data){
 
   shm = (void *) shmat(queue->shmIDs[queue->meta->writeIndex], (void*) 0, 0);
   memcpy(shm, data, MSG_HEADER_SIZE);
-  memcpy(shm+MSG_HEADER_SIZE, data->content, queue->sizePerSeg);
+  memcpy(shm+MSG_HEADER_SIZE, data->content, data->contentSize);
   shmdt(shm);
 
-  //printf("Enqueue idx(%d) cur(%d) RI(%d) WI(%d)\n", queue->queueIndex,
-  //    queue->meta->curSeg, queue->meta->readIndex, queue->meta->writeIndex);
   queue->meta->curSeg+=1;
   queue->meta->writeIndex = (queue->meta->writeIndex + 1) % queue->maxSeg;
 
@@ -84,7 +82,7 @@ int dequeue(shmQueue_t* queue, struct message* data){
 
   shm = (void *) shmat(queue->shmIDs[queue->meta->readIndex], (void*) 0, 0);
   memcpy(data, shm, MSG_HEADER_SIZE);
-  memcpy(data->content, shm+MSG_HEADER_SIZE, queue->sizePerSeg);
+  memcpy(data->content, shm+MSG_HEADER_SIZE, data->contentSize);
   shmdt(shm);
 
   queue->meta->curSeg-=1;
