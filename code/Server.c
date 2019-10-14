@@ -19,6 +19,10 @@ unsigned int segID;
 segInfo_t *seg;
 
 unsigned int pid;
+int isSync;
+int synchedClient;
+typedef void (*callBack)();
+callBack reqFunc;
 
 shmQueue_t queue[MAX_QUEUE];
 message_t queueMessage[2];
@@ -31,6 +35,7 @@ unsigned int servingClient;
 void *bindClient();
 void *workComp();
 void INThandler(int);
+void getRequest(int idx){ dequeue(&queue[idx], &queueMessage[0]); }
 
 int main(int argc, char *argv[]){
   enum{
@@ -50,6 +55,18 @@ int main(int argc, char *argv[]){
 
   maxSeg = atoi(argv[ARG_SEG_NUM]);
   sizePerSeg = atoi(argv[ARG_SEG_SIZE]);
+
+  reqFunc = getRequest;
+  if(!strcmp(argv[ARG_SYNC], "ASYNC") || !strcmp(argv[ARG_SYNC], "async")){
+    printf("  ASYNC\n\n");
+    isSync = 0;
+  }
+  else{
+    printf("  SYNC\n\n");
+    isSync = 1;
+    synchedClient = -1;
+  }
+
   segID = getShm(SEG_KEY, sizeof(segInfo_t));
   seg = shmat(segID, (void*)0, 0);
   seg->sizePerSeg = sizePerSeg;
@@ -93,17 +110,31 @@ void *bindClient(){
     pthread_mutex_lock(&queuePool->lock);
     for(int i = 0; i < MAX_CLIENT; i++){
       if(queuePool->pool[i] == REQUESTED){
-        queuePool->pool[i] = USED;
-        curQueue = i * 2;
-        initQueue(&queue[curQueue]);
-        initQueue(&queue[curQueue+1]);
-
+        if(isSync){
+          if(synchedClient == -1){
+            queuePool->pool[i] = USED;
+            synchedClient = i;
+            curQueue = i * 2;
+            initQueue(&queue[curQueue]);
+            initQueue(&queue[curQueue+1]);
+          }
+          else if(queuePool->pool[synchedClient] == AVAILABLE){
+            synchedClient = -1;
+          }
+        }
+        else{
+          queuePool->pool[i] = USED;
+          curQueue = i * 2;
+          initQueue(&queue[curQueue]);
+          initQueue(&queue[curQueue+1]);
+        }
       }
       printf("%d ", queuePool->pool[i]);
     }
     printf("\n");
+    printf("synched client %d\n", synchedClient);
     pthread_mutex_unlock(&queuePool->lock);
-    sleep(2);
+    usleep(500000);
   }
 }
 
@@ -116,17 +147,26 @@ void *workComp(){
 
   queueMessage[0].content = (void*)malloc(queue[0].sizePerSeg+10);
   queueMessage[1].content = (void*)malloc(queue[1].sizePerSeg+10);
-  queueMessage[1].id = pid;
 
-  printf("Compressor works...\n");
+  printf("Compressor works...   ");
+  if(isSync) printf("in SYNC mode\n");
+  else printf("in ASYNC mode\n");
 
   while(1){
     for(int i=0; i < MAX_CLIENT; i++){
       curQueue = -1;
-      pthread_mutex_lock(&queuePool->lock);
-      if(queuePool->pool[i] == USED)
-        curQueue = (i*2);
-      pthread_mutex_unlock(&queuePool->lock);
+      if(isSync){
+        if(synchedClient != -1){
+          pthread_mutex_lock(&queuePool->lock);
+          if(queuePool->pool[i] == USED) curQueue = (i*2);
+          pthread_mutex_unlock(&queuePool->lock);
+        }
+      }
+      else{
+        pthread_mutex_lock(&queuePool->lock);
+        if(queuePool->pool[i] == USED) curQueue = (i*2);
+        pthread_mutex_unlock(&queuePool->lock);
+      }
 
       if(curQueue > -1){
         if(queue[curQueue].meta->curSeg > 0 &&
@@ -136,10 +176,10 @@ void *workComp(){
               (const char *)queueMessage[0].content,
               queueMessage[0].contentSize, queueMessage[1].content,
               &queueMessage[1].contentSize);
+          queueMessage[1].id = pid;
           enqueue(&queue[curQueue+1], &queueMessage[1]);
         }
       }
-
     }
   }
 }

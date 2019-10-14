@@ -32,6 +32,7 @@ int isSync = 0;
 callBack resFunc;
 requestInfo_t *reqInfo;
 printInfo_t pInfo;
+struct timeval waitTime;
 
 shmQueue_t queue[2];
 message_t queueMessage[2];
@@ -59,13 +60,13 @@ int main(int argc, char *argv[]){
   seg = shmat(segID, (void*)0, 0);
   sizePerSeg = seg->sizePerSeg;
   maxSeg = seg->maxSeg;
+  resFunc = getResponse;
   printf("maxSeg %d, sizePerSeg %d\n", maxSeg, sizePerSeg);
 
   printf("Sync Mode...\n");
   if(!strcmp(argv[ARG_SYNC], "ASYNC") || !strcmp(argv[ARG_SYNC], "async")){
     printf("  ASYNC\n\n");
     isSync = 0;
-    resFunc = getResponse;
   }
   else{
     printf("  SYNC\n\n");
@@ -94,14 +95,18 @@ int main(int argc, char *argv[]){
         queuePool->pool[i] = REQUESTED;
         printf("queue %d is requested...\n", pid);
         pthread_mutex_unlock(&queuePool->lock);
+        gettimeofday(&waitTime, NULL);
         break;
       }
     }
     pthread_mutex_unlock(&queuePool->lock);
-    sleep(1);
   }
 
   while(queuePool->pool[pid] != USED){}
+  struct timeval temp;
+  gettimeofday(&temp, NULL);
+  timersub(&temp, &waitTime, &waitTime);
+
   printf("queue %d registered..!\n", pid);
 
   printf("queue Create...");
@@ -159,6 +164,7 @@ void *requestServer(){
   res.sizePerSeg = queue[0].sizePerSeg-10;
   res.simple = (double)simple.tv_sec + ((double)simple.tv_usec / 1000000);
   res.stress = (double)stress.tv_sec + ((double)stress.tv_usec / 1000000);
+  res.wait = (double)waitTime.tv_sec + ((double)waitTime.tv_usec / 1000000);
   res.isSync = isSync;
   generateOutput(&res);
 
@@ -166,6 +172,7 @@ void *requestServer(){
       (simple.tv_usec/1000));
   printf("Stress execution time: %lds %ldms\n", stress.tv_sec,
       (stress.tv_usec/1000));
+  printf("Wait time: %lds %ldms\n", waitTime.tv_sec, (waitTime.tv_usec/1000));
 }
 
 void testRoundtrip(int iteration, char *fn,
@@ -191,28 +198,22 @@ void testRoundtrip(int iteration, char *fn,
     for(curProgress = 0; curProgress < packets;){
       readSize = fread(queueMessage[0].content, 1, sizePerSeg, fp);
       queueMessage[0].contentSize = readSize;
+      queueMessage[0].id = pid;
       strcpy(queueMessage[0].fn, fn);
-      if(isSync){
-        if(queue[0].meta->curSeg < maxSeg){
-          enqueue(&queue[0], &queueMessage[0]);
-          while(queue[1].meta->curSeg < 1){ }  // blocking
-          dequeue(&queue[1], &queueMessage[1]);
-          curProgress++;
-          printTotalInfo(curProgress, packets, i, iteration);
-        }
+
+      if(queue[0].meta->curSeg < maxSeg){
+        enqueue(&queue[0], &queueMessage[0]);
       }
-      else{
-        if(queue[0].meta->curSeg < maxSeg){
-          enqueue(&queue[0], &queueMessage[0]);
-        }
-        if(queue[1].meta->curSeg > 0){
-          resFunc();
-          curProgress++;
-          printTotalInfo(curProgress, packets, i, iteration);
-        }
+
+      if(queue[1].meta->curSeg > 0){
+        printf("dequeue elements: %d\n", queue[1].meta->curSeg);
+        resFunc();
+        curProgress++;
+        printTotalInfo(curProgress, packets, i, iteration);
       }
     }
   }
+
   gettimeofday(&temp, NULL);
   timersub(&temp, &totalTime, &totalTime);
   pInfo.timeEachFile[tempInfo] = (double)totalTime.tv_sec +

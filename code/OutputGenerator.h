@@ -7,6 +7,7 @@ typedef struct resultInfo{
   int sizePerSeg;
   long double simple;
   long double stress;
+  long double wait;
   int isSync;
 }resultInfo_t;
 

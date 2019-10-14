@@ -9,8 +9,8 @@ void generateOutput(resultInfo_t *res){
     printf("%s open error\n", OUTPUT_FN);
     return;
   }
-  fprintf(fpOut, "seg%d, %8.3Lf, %8.3Lf, %5d, %5d\n", res->sizePerSeg,
-      res->stress, res->simple, res->isSync, res->maxSeg);
+  fprintf(fpOut, "seg%d, %8.3Lf, %8.3Lf, %8.3Lf, %5d, %5d\n", res->sizePerSeg,
+      res->stress, res->wait, res->simple, res->isSync, res->maxSeg);
 
   fclose(fpOut);
 }
