@@ -105,9 +105,18 @@ int main(int argc, char *argv[]){
 
 void *bindClient(){
   int curQueue;
+  int clearFlag;
   for(int i = 0; i < 1000000; i++){
     printf("Queue Usage...\n");
     pthread_mutex_lock(&queuePool->lock);
+
+    clearFlag = true;
+    for(int i = 0; i < MAX_CLIENT; i++)
+      if(queuePool->pool[i] == USED)
+        clearFlag = false;
+
+    if(clearFlag == true) synchedClient = -1;
+
     for(int i = 0; i < MAX_CLIENT; i++){
       if(queuePool->pool[i] == REQUESTED){
         if(isSync){
@@ -132,7 +141,7 @@ void *bindClient(){
       printf("%d ", queuePool->pool[i]);
     }
     printf("\n");
-    printf("synched client %d\n", synchedClient);
+    if(isSync) printf("synched client %d\n", synchedClient);
     pthread_mutex_unlock(&queuePool->lock);
     usleep(500000);
   }
